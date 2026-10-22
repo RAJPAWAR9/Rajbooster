@@ -1325,7 +1325,7 @@ function cfCheck(el){
   }catch(e){}
 }
 BgTick.add(function(){cfCheck(primaryAudio());});
-function primaryAudio(){ return audios[activeIdx]; }
+function primaryAudio(){ var y=window.__bosYT; return (y&&y.on)?y.fake:audios[activeIdx]; }
 function secondaryAudio(){ return audios[1-activeIdx]; }
 audioA.volume = State.volume; audioB.volume = 0;
 function bestAudioUrl(track){
@@ -5405,6 +5405,7 @@ document.getElementById('view-toplists').addEventListener('click',onClick);
 setInterval(function(){if(State.view==='charts'&&CH.list&&!CH.busy&&Date.now()-CH.at>300000)window.renderCharts(true);if(State.view==='toplists'&&TL.html&&!TL.busy&&Date.now()-TL.at>300000)window.renderToplists(true)},60000);
 })();
 window.BOS_PLAY=function(list,i){return Player.play(list[i],list,i,{autoTransition:false});};window.BOS_TOAST=function(m,t){try{toast(m,t);}catch(e){}};
+try{window.BosApp={State:State,renderMiniPlayer:renderMiniPlayer,renderFullPlayer:renderFullPlayer,renderQueuePanel:renderQueuePanel,SystemMedia:SystemMedia,updateAmbient:updateAmbient,loadLyricsFor:loadLyricsFor,updatePlayIcons:updatePlayIcons,paintProgress:paintProgress,fmtTime:fmtTime};}catch(e){console.warn('BosApp export',e);}
 })();
 </script>
 
@@ -8507,6 +8508,10 @@ window.__bosLyricFix={fixLine:fixLine,demoji:demoji};
 
   // ---- hidden video over player art (Main Search plays) ----
   var YTV = (function(){
+    var App = window.BosApp || {};
+    var State = App.State, renderMiniPlayer = App.renderMiniPlayer, renderFullPlayer = App.renderFullPlayer, renderQueuePanel = App.renderQueuePanel,
+        SystemMedia = App.SystemMedia, updateAmbient = App.updateAmbient, loadLyricsFor = App.loadLyricsFor,
+        updatePlayIcons = App.updatePlayIcons, paintProgress = App.paintProgress, fmtTime = App.fmtTime;
     var Y = { on:false, playing:false, id:'', dur:0, base:0, t0:0, host:SERVERS[0], fr:null, tm:0 };
     var fake = {
       get currentTime(){ if (!Y.playing) return Y.base; var c = Y.base + (Date.now()-Y.t0)/1000; return Y.dur ? Math.min(c, Y.dur) : c; },
@@ -8516,8 +8521,7 @@ window.__bosLyricFix={fixLine:fixLine,demoji:demoji};
       play:function(){ Y.resume(); return Promise.resolve(); }, pause:function(){ Y.halt(); },
       load:function(){}, addEventListener:function(){}, removeEventListener:function(){}
     };
-    var _pa = window.primaryAudio;
-    window.primaryAudio = function(){ return Y.on ? fake : _pa(); };
+    window.__bosYT = { get on(){ return Y.on; }, fake: fake };
 
     function frame(){
       if (Y.fr) return Y.fr;
@@ -8548,6 +8552,9 @@ window.__bosLyricFix={fixLine:fixLine,demoji:demoji};
       try {
         State.currentTrack = t; State.isPlaying = true;
         renderMiniPlayer(); renderFullPlayer(); icons();
+        try { renderQueuePanel(); } catch (e) {}
+        try { SystemMedia.update(t); } catch (e) {}
+        try { updateAmbient(t); } catch (e) {}
         var tt = document.getElementById('time-total'); if (tt && dur) tt.textContent = fmtTime(dur);
         if (typeof loadLyricsFor === 'function') loadLyricsFor(t);
       } catch (e) {}

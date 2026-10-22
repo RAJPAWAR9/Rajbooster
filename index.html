@@ -8567,6 +8567,17 @@ window.__bosLyricFix={fixLine:fixLine,demoji:demoji};
       if (Y.fr) Y.fr.src = 'about:blank';
     };
     function icons(){ try { State.isPlaying = Y.playing; updatePlayIcons(); } catch (e) {} }
+    // the app paints progress/time only from real <audio> events, so drive it from our own clock
+    setInterval(function(){
+      if (!Y.on) return;
+      try {
+        if (Y.playing && Y.dur && fake.currentTime >= Y.dur - 0.3) { Y.halt(); Y.base = Y.dur; }
+        if (State.currentTrack && State.currentTrack.source === 'youtube') {
+          if (State.isPlaying !== Y.playing) { State.isPlaying = Y.playing; updatePlayIcons(); }
+          if (Y.dur) paintProgress(fake);
+        }
+      } catch (e) {}
+    }, 400);
 
     // play / pause buttons control the hidden video while it is the current song
     ['mini-play','fp-play'].forEach(function(id){
